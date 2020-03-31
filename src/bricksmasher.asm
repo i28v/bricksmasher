@@ -79,13 +79,6 @@ loadpalettes:
     bne loadpalettes
     ldx #$00   
 
-enableNMI:
-    cli 
-    lda #%10010000
-    sta $2000
-    lda #%00011110
-    sta $2001
-
 init:
     ldx #$00
 initCollisionRam:
@@ -107,6 +100,14 @@ initCollisionRam:
     lda #$02
     sta paddlespeed
     sta ballspeed
+
+
+enableNMI:
+    cli 
+    lda #%10010000
+    sta $2000
+    lda #%00011110
+    sta $2001
 
 Forever:
     jmp Forever
