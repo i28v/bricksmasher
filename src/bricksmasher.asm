@@ -1,6 +1,9 @@
+collisonram = $700
+
 .segment "HEADER"
+
 .byte "NES"
-.byte $1a
+.byte $1A
 .byte $02
 .byte $01
 .byte %00000000
@@ -9,19 +12,25 @@
 .byte $00
 .byte $00
 .byte $00, $00, $00, $00, $00
+
 .segment "ZEROPAGE"
+
 northwest = $01
 southwest = $02
 northeast = $03
 southeast = $04
-collsionHandler:  .res 1
-balldirection:    .res 1
-paddlexpos:       .res 1
-paddleypos:       .res 1
-ballxpos:         .res 1 
-ballypos:         .res 1
-tmp:              .res 1
+collsionHandler:   .res 1
+balldirection:     .res 1
+paddlespeed:       .res 1 
+ballspeed:         .res 1
+paddlexpos:        .res 1
+paddleypos:        .res 1
+ballxpos:          .res 1
+ballypos:          .res 1
+paddlehitboxindex: .res 1
+
 .segment "STARTUP"
+
 Reset:
     sei 
     cld 
@@ -37,6 +46,7 @@ Reset:
     bit $2002
     bpl :-
     txa 
+
 clearmem:
     sta $0000, x
     sta $0100, x
@@ -45,7 +55,7 @@ clearmem:
     sta $0500, x 
     sta $0600, x
     sta $0700, x
-    lda #$ff 
+    lda #$FF
     sta $0200, x
     lda #$00
     inx 
@@ -61,6 +71,7 @@ clearmem:
     lda #$00
     sta $2006
     ldx #$00
+
 loadpalettes:
     lda PaletteData, x
     sta $2007
@@ -68,41 +79,68 @@ loadpalettes:
     cpx #$20
     bne loadpalettes
     ldx #$00   
+
 enableNMI:
     cli 
     lda #%10010000
     sta $2000
     lda #%00011110
     sta $2001
-initGame:
-    lda #$A7
-    sta paddlexpos 
+
+init:
+    ldx #$00
+initCollisionRam:
+    lda CollisionMap, x
+    sta collisonram, x
+    inx 
+    cpx #$78
+    bne initCollisionRam
+    lda #$DE
+    sta paddlexpos
+    lda #$C8 
     sta paddleypos
-    lda #$64
+    lda #130
     sta ballxpos
+    lda #$64
     sta ballypos
     lda #southeast 
     sta balldirection
-    jmp Loop 
-delay:
-    ldy #$00
-delayLoop1:
-    ldx #$00 
-delayLoop2:
-    inx 
-    cpx #$ff 
-    bne delayLoop2
-    iny 
-    cpy #$05
-    bne delayLoop1  
+    lda #$02
+    sta paddlespeed
+    sta ballspeed
+
+Forever:
+    jmp Forever
+
+CheckCollide:
+    txa 
+    lsr 
+    lsr 
+    lsr 
+    lsr 
+    lsr 
+    lsr 
+    sta collsionHandler
+    tya 
+    lsr 
+    lsr 
+    lsr 
+    asl 
+    asl 
+    clc 
+    adc collsionHandler
+    tay 
+    txa 
+    lsr 
+    lsr 
+    lsr 
+    and #%00000111
+    tax 
+    lda collisonram, y
+    and BitMask, x
     rts 
 
-
-gameOver:
-    jmp gameOver
-
-Loop: 
-    jsr delay
+update:
     lda #$01
     sta $4016
     lda #$00
@@ -141,28 +179,45 @@ Down_not_pressed:
     and #%00000001
     cmp #%00000001
     bne Left_not_pressed
-    dec paddlexpos
+    lda paddlexpos 
+    sec 
+    sbc paddlespeed 
+    sta paddlexpos
     lda paddlexpos
-    clc
+    clc 
     adc #$10
-    cmp #$08
-    bne :+
-    inc paddlexpos
+    tax 
+    ldy paddleypos 
+    jsr CheckCollide
+    beq :+
+    lda paddlexpos 
+    clc 
+    adc paddlespeed 
+    sta paddlexpos
 :    
 Left_not_pressed:
     lda $4016
     and #%00000001
     cmp #%00000001
     bne Right_not_pressed
-    inc paddlexpos
+    lda paddlexpos 
+    clc 
+    adc paddlespeed
+    sta paddlexpos
     lda paddlexpos 
     clc 
     adc #$18
-    cmp #$F7
-    bne :+
-    dec paddlexpos
+    tax 
+    ldy paddleypos 
+    jsr CheckCollide
+    beq :+
+    lda paddlexpos 
+    sec 
+    sbc paddlespeed 
+    sta paddlexpos
 :
 Right_not_pressed:
+
 updateBall:
     lda balldirection
     cmp #northwest 
@@ -175,8 +230,14 @@ updateBall:
     beq move_southeast 
     jmp finishupdateball
 move_northwest:
-    dec ballxpos 
-    dec ballypos 
+    lda ballxpos 
+    sec 
+    sbc ballspeed 
+    sta ballxpos  
+    lda ballypos 
+    sec 
+    sbc ballspeed 
+    sta ballypos
     lda ballypos 
     cmp #$00
     bne :+
@@ -187,18 +248,26 @@ move_northwest:
     clc 
     adc #$08
     cmp #$00
-    bne finishupdateball
+    bne :+
     lda #northeast 
     sta balldirection
+:
     jmp finishupdateball
 move_southwest:
-    dec ballxpos 
-    inc ballypos 
+    lda ballxpos
+    sec 
+    sbc ballspeed 
+    sta ballxpos  
     lda ballypos 
-    cmp #$D2
-    bne :+
-   ; lda #northwest 
-   ; sta balldirection
+    clc 
+    adc ballspeed 
+    sta ballypos
+    ldx ballxpos 
+    ldy ballypos 
+    jsr CheckCollide
+    beq :+
+    lda #northwest 
+    sta balldirection
 :
     lda ballxpos 
     clc 
@@ -209,8 +278,14 @@ move_southwest:
     sta balldirection
     jmp finishupdateball
 move_northeast:
-    inc ballxpos
-    dec ballypos
+    lda ballxpos 
+    clc 
+    adc ballspeed 
+    sta ballxpos
+    lda ballypos 
+    sec 
+    sbc ballspeed 
+    sta ballypos 
     lda ballypos 
     cmp #$00
     bne :+
@@ -220,63 +295,77 @@ move_northeast:
     lda ballxpos 
     sec 
     sbc #$1F
-    cmp #$D2 
+    cmp #$D1
     bne finishupdateball
     lda #northwest 
     sta balldirection
     jmp finishupdateball
 move_southeast: 
-    inc ballxpos 
-    inc ballypos 
+    lda ballxpos 
+    clc 
+    adc ballspeed 
+    sta ballxpos 
     lda ballypos 
-    cmp #$D2
-    bne :+
-   ; lda #northeast
-   ; sta balldirection
+    clc 
+    adc ballspeed 
+    sta ballypos
+    ldx ballxpos 
+    ldy ballypos 
+    jsr CheckCollide
+    beq :+
+    lda #northeast
+    sta balldirection
 :
     lda ballxpos 
     sec 
     sbc #$1F
-    cmp #$D2 
+    cmp #$D1
     bne finishupdateball
     lda #southwest
     sta balldirection
 finishupdateball:
-    lda ballypos
+        lda ballypos
     cmp paddleypos 
     bne skipCheckBall
     lda #$00
-    sta tmp
+    sta paddlehitboxindex
     ldx #$00
 checkBallPosLoop:
     lda paddlexpos
     clc
-    adc tmp
+    adc paddlehitboxindex
     cmp ballxpos
-    bne end
+    bne endCheckBallPosLoop
     lda balldirection
     cmp #southwest
     bne :+
     lda #northwest
     sta balldirection
-    jmp end
+    jmp endCheckBallPosLoop
 :
     lda #northeast
     sta balldirection
-end:
-    inc tmp
+endCheckBallPosLoop:
     inx
+    stx paddlehitboxindex
     cpx #24
     bne checkBallPosLoop
-skipCheckBall:
+skipCheckBall:    
+    rts
+    
 
-    jmp Loop
-NMI:
+clearPaddleCollisionBitmap:
     lda #$00
-    sta $2003
-    lda #$02
-    sta $4014
-NMI_draw:
+    sta collisonram+94
+    sta collisonram+95
+    sta collisonram+96
+    sta collisonram+97
+    sta collisonram+98
+    sta collisonram+99
+    rts
+
+
+draw:
     lda #$08
     clc 
     adc ballypos
@@ -327,12 +416,63 @@ NMI_draw:
     clc 
     adc #$10
     sta $020F
-NMI_end:
-    rti 
-PaletteData:
-.byte $0C,$29,$1A,$0F,$22,$36,$17,$0f,$22,$30,$21,$0f,$22,$27,$17,$0F  ;background palette data
-.byte $0C,$27,$28,$39,$0C,$16,$16,$17,$0C,$06,$0F,$12,$22,$0F,$36,$17  ;sprite palette data
+    rts 
 
+NMI:
+    lda #$00
+    sta $2003
+    lda #$02
+    sta $4014
+    jsr draw 
+    jsr update
+    rti 
+
+PaletteData:
+.byte $0C,$29,$1A,$0F,$22,$36,$17,$0F,$22,$30,$21,$0F,$22,$27,$17,$0F  
+.byte $0C,$27,$28,$39,$0C,$16,$16,$17,$0C,$06,$0F,$12,$22,$0F,$36,$17  
+
+CollisionMap:
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %10000000, %00000000, %00000000, %00000001 
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    .byte %00000000, %00000000, %00000000, %00000000
+    
+BitMask:
+    .byte %10000000
+    .byte %01000000
+    .byte %00100000
+    .byte %00010000
+    .byte %00001000
+    .byte %00000100
+    .byte %00000010
+    .byte %00000001
+    
 .segment "VECTORS"
     .word NMI
     .word Reset
