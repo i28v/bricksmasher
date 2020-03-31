@@ -98,7 +98,7 @@ initCollisionRam:
     sta paddlexpos
     lda #$C8 
     sta paddleypos
-    lda #130
+    lda #$82
     sta ballxpos
     lda #$64
     sta ballypos
