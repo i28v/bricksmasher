@@ -1,4 +1,8 @@
 collisonram = $700
+northwest = $01
+southwest = $02
+northeast = $03
+southeast = $04
 
 .segment "HEADER"
 
@@ -14,11 +18,6 @@ collisonram = $700
 .byte $00, $00, $00, $00, $00
 
 .segment "ZEROPAGE"
-
-northwest = $01
-southwest = $02
-northeast = $03
-southeast = $04
 collsionHandler:   .res 1
 balldirection:     .res 1
 paddlespeed:       .res 1 
@@ -353,18 +352,6 @@ endCheckBallPosLoop:
 skipCheckBall:    
     rts
     
-
-clearPaddleCollisionBitmap:
-    lda #$00
-    sta collisonram+94
-    sta collisonram+95
-    sta collisonram+96
-    sta collisonram+97
-    sta collisonram+98
-    sta collisonram+99
-    rts
-
-
 draw:
     lda #$08
     clc 
