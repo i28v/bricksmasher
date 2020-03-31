@@ -323,7 +323,7 @@ move_southeast:
     lda #southwest
     sta balldirection
 finishupdateball:
-        lda ballypos
+    lda ballypos
     cmp paddleypos 
     bne skipCheckBall
     lda #$00
