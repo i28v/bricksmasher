@@ -261,13 +261,6 @@ move_southwest:
     clc 
     adc ballspeed 
     sta ballypos
-    ldx ballxpos 
-    ldy ballypos 
-    jsr CheckCollide
-    beq :+
-    lda #northwest 
-    sta balldirection
-:
     lda ballxpos 
     clc 
     adc #$08
@@ -308,13 +301,6 @@ move_southeast:
     clc 
     adc ballspeed 
     sta ballypos
-    ldx ballxpos 
-    ldy ballypos 
-    jsr CheckCollide
-    beq :+
-    lda #northeast
-    sta balldirection
-:
     lda ballxpos 
     sec 
     sbc #$1F
