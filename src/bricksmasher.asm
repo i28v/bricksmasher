@@ -101,7 +101,6 @@ initCollisionRam:
     sta paddlespeed
     sta ballspeed
 
-
 enableNMI:
     cli 
     lda #%10010000
