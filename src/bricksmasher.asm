@@ -1,3 +1,5 @@
+; Tuesday March 31, 2020 4:04 PM
+
 collisonram = $700
 northwest = $01
 southwest = $02
