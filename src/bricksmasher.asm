@@ -348,7 +348,7 @@ checkBallPosLoop:
 endCheckBallPosLoop:
     inx
     stx paddlehitboxindex
-    cpx #24
+    cpx #$18
     bne checkBallPosLoop
 skipCheckBall:    
     rts
