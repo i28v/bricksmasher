@@ -122,8 +122,8 @@ CheckCollide:
     sta collsionHandler
     tya 
     lsr 
-    lsr 
-    lsr 
+    lsr  
+    lsr
     asl 
     asl 
     clc 
@@ -145,13 +145,13 @@ update:
     lda #$00
     sta $4016
     lda $4016
-    and #%00000001
+    and #%00000001 
     cmp #%00000001
     bne A_not_pressed
 A_not_pressed:
     lda $4016
     and #%00000001
-    cmp #%00000001
+    cmp #%00000001 
     bne B_not_pressed
 B_not_pressed:
     lda $4016
@@ -216,7 +216,7 @@ Left_not_pressed:
     sta paddlexpos
 :
 Right_not_pressed:
-
+  
 updateBall:
     lda balldirection
     cmp #northwest 
@@ -317,6 +317,8 @@ finishupdateball:
     ldx #$00
 checkBallPosLoop:
     lda paddlexpos
+    sec 
+    sbc #$08
     clc
     adc paddlehitboxindex
     cmp ballxpos
@@ -333,7 +335,7 @@ checkBallPosLoop:
 endCheckBallPosLoop:
     inx
     stx paddlehitboxindex
-    cpx #$18
+    cpx #$20
     bne checkBallPosLoop
 skipCheckBall:    
     rts
